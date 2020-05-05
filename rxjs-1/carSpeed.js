@@ -6,7 +6,8 @@ REFRESH_RATE = 200; // ms : minimum 150
 const calculateSpeed = (dataObjs) => {
   if (!Array.isArray(dataObjs)) { return 0; }
   if (dataObjs.length <= 2) { return 0; }
-  const [firstEntr, lastEntr] = dataObjs.slice(-2)
+  const firstEntr = dataObjs[0];
+  const lastEntr = dataObjs.splice(-1)[0];
   const timeInSec = ((lastEntr.time - firstEntr.time) / 1000);
 
   // I return the raw value
