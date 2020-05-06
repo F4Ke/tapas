@@ -5,6 +5,7 @@
 
 interface Itab extends browser.tabs.Tab {
   totalOpened: number,
+  port: browser.runtime.Port,
 }
 
 export { Itab };

@@ -15,6 +15,10 @@ const findOrInitializeTab = (tab: Itab) : Itab  => {
     return fTab;
   } else {
     tab.totalOpened = 0;
+    // tab.port = browser.tabs.connect(
+    //   tabId,
+    //   { name: "content_script/lifecycle" }
+    // );
     tabs.push(tab);
   }
   return tab;
@@ -35,13 +39,19 @@ const sendMessage = (tabId: number, msg: any, callback: any) => {
    }).catch(onError);
 }
 
-const popupOpened = (tab: Itab) => {
+const popupOpenedMsg = (tab: Itab) => {
   tab.totalOpened += 1;
   // now send the message
   sendMessage(tab.id as number, {counter: tab.totalOpened}, () => {
-    console.log("Update complete");
+    // console.log("Update complete");
   })
 }
+
+// const popupOpenedPort = (tab: Itab) => {
+//   tab.totalOpened += 1;
+//   // now send the message
+//   tab.port.postMessage({counter: tab.totalOpened});
+// }
 
 const tabInit = (tabId: number) => {
   // fetch the tab
@@ -49,7 +59,9 @@ const tabInit = (tabId: number) => {
    browser.tabs.get(tabId).then(tab => {
     // tab exist
     // we send the popupOpenedMEssage to the content
-    popupOpened(findOrInitializeTab(tab as Itab));
+    const currentTab = findOrInitializeTab(tab as Itab);
+    popupOpenedMsg(currentTab);
+    // popupOpenedPort(currentTab);
   })
 }
 
@@ -63,13 +75,3 @@ browser.runtime.onMessage.addListener((data, s) => {
   }
   return Promise.resolve({response: 'ok'});
 });
-
-//browser.runtime.onMessage.addListener(tabInit)
-
-
-// browser.notifications.create({
-//   "type": "basic",
-//   "title": "hello",
-//   "message":"Opened"
-// });
-
