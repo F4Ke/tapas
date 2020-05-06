@@ -4,8 +4,8 @@ const port = browser.runtime.connect(browser.runtime.id, { name: 'content_script
 
 // perform cleanup here
 port.onDisconnect.addListener(() => {
-  console.log('cleanup');
-  // browser.runtime.onMessage.removeListener ...
+  browser.runtime.onMessage.removeListener((any) => {})
+  //
 });
 
 const messageFormat = (counter: number) => {
