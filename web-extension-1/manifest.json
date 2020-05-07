@@ -12,8 +12,7 @@
   "permissions": [
     "<all_urls>",
     "activeTab",
-    "tabs",
-    "notifications"
+    "tabs"
   ],
   "background": {
     "scripts": ["browser-polyfill.min.js", "background.js"],
