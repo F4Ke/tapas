@@ -1,5 +1,3 @@
-// import { Itab } from '../interfaces/tab'
-
 const port = browser.runtime.connect(browser.runtime.id, { name: 'content_script/lifecycle' });
 
 const messageFormat = (counter: number) => {
