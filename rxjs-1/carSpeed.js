@@ -3,9 +3,11 @@ const { bufferTime, filter, map } = require("rxjs/operators");
 
 REFRESH_RATE = 200; // ms : minimum 150
 
-// here we have a lot of return 0
-// we want to avoid any divide by 0 possibilities
+// return the speed in m/s or 0
 const calculateSpeed = (dataObjs) => {
+  // here we have a lot of return 0
+  // we want to avoid any divide by 0 possibilities
+
   if (!Array.isArray(dataObjs)) { return 0; }
   if (dataObjs.length <= 2) { return 0; }
   const firstEntr = dataObjs[0];
