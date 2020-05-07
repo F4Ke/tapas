@@ -4,6 +4,9 @@ const { getCarSpeed } = require('./carSpeed');
 
 CAR_NUMBER = 2;
 
+// return the table sorted
+// using the key paramters
+// note : the key params as to be a string : we can improve this part
 const sortTableObject = (carObjects, key) => {
   return carObjects.sort((a, b) => {
       const x = a[key];
@@ -12,11 +15,13 @@ const sortTableObject = (carObjects, key) => {
   });
 }
 
+// check if the car exist using it's name
 const carExistInBoard = (board, carName) => {
   const indexOfCar = (boardObj) => boardObj.carName === carName;
   return (board.findIndex(indexOfCar) >= 0);
 }
 
+// return a car object
 const baseCarObject = (time, carName, xLocation, currentSpeedGen) => {
   // use the generator and fetch the last known speed of this car
   const nextGeneratorIt = currentSpeedGen.next();
@@ -28,6 +33,7 @@ const baseCarObject = (time, carName, xLocation, currentSpeedGen) => {
   }
 }
 
+// we prepare the board raw data in order to complete the computation
 const prepareDataProcessBoard = (board) => {
   let pos = CAR_NUMBER;
   // we order by inverted position
@@ -47,6 +53,8 @@ const prepareDataProcessBoard = (board) => {
   return
 }
 
+// finalize the data of the board comptuation
+// in order to send it usable for the view
 const processBoard = (board) => {
   const retBoard = prepareDataProcessBoard(board);
   // we process with the calculation of the inverted list
@@ -67,6 +75,9 @@ const processBoard = (board) => {
   return (retBoard)
 }
 
+// this is our generator
+// every time we ask it the speed for our car
+// it will answer us ths last know speed (using it's interval of 200ms)
 function *speedFor(obs) {
   let values = []
   obs.subscribe( (speed) => {
@@ -74,19 +85,22 @@ function *speedFor(obs) {
     // we will be able to return the last value
     values.push(speed);
   });
+
+  // note : this while true can be strange for non-generator users
   while (true) {
+    // here we return the last known avalue
     yield values[values.length-1]
   }
 }
 
+// create the speed generator, using the carSpeed observable for every car of the race
 const initalizeCarSpeeds = (race) => {
   const carNames = race.getCars();
   speedsObs = []
   carNames.forEach(name => {
-    // create a generator in order to use the "slow" observable of the speed calculation
+    // create a generator in order to use the "slow"-er observable of the speed calculation
     const speedGen = speedFor(getCarSpeed(race, name));
-    speedGen.next(); // we start the observable
-    // speedsObs.push({ name: name, speed: getCarSpeed(race, name) })
+    speedGen.next(); // we start the observable inside our generator
     speedsObs.push({ name: name, speed: speedGen })
   })
   return speedsObs;
