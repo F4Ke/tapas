@@ -1,25 +1,23 @@
-import { Itab } from '../interfaces/tab'
+import { Itab, currentTabPromise } from '../interfaces/tab'
 
 let tabs:Itab[] = new Array<Itab>();
 
-const setupBackground = async () => {
-  console.log('setup background');
-};
+// set the port OR reset the port when we refresh the page
+const resetPort = (tab: Itab, port: browser.runtime.Port) : Itab => {
+  tab.port = port;
+  return tab;
+}
 
-const findOrInitializeTab = (tab: Itab) : Itab  => {
+const findOrInitializeTab = (tab: Itab, port: browser.runtime.Port) : Itab  => {
   const tabId = tab.id as number; // because the ID can be undefined
 
   // find or insert the tab into our existing array
-  let fTab = tabs.find(t => t.id === tabId);
+  const fTab = tabs.find(t => t.id === tabId);
   if (fTab) {
-    return fTab;
+    return resetPort(fTab, port);
   } else {
     tab.totalOpened = 0;
-    // tab.port = browser.tabs.connect(
-    //   tabId,
-    //   { name: "content_script/lifecycle" }
-    // );
-    tabs.push(tab);
+    tabs.push(resetPort(tab, port));
   }
   return tab;
 }
@@ -28,50 +26,46 @@ const onError = (error: any) => {
   console.error(error);
 }
 
-const sendMessage = (tabId: number, msg: any, callback: any) => {
-  // send the message to the tab
-  // with the counrter inside
-  browser.tabs.sendMessage(
-     tabId,
-     msg
-   ).then(response => {
-     callback();
-   }).catch(onError);
-}
-
-const popupOpenedMsg = (tab: Itab) => {
+const popupOpenedPort = (tadId : number) => {
+  const tab = tabs.find(t => t.id === tadId) as Itab;
+  if (tab.port === null) {
+    return ;
+  }
   tab.totalOpened += 1;
-  // now send the message
-  sendMessage(tab.id as number, {counter: tab.totalOpened}, () => {
-    // console.log("Update complete");
-  })
+  // now send the message via the port
+  tab.port.postMessage({counter: tab.totalOpened});
 }
 
-// const popupOpenedPort = (tab: Itab) => {
-//   tab.totalOpened += 1;
-//   // now send the message
-//   tab.port.postMessage({counter: tab.totalOpened});
-// }
-
-const tabInit = (tabId: number) => {
+const tabInit = (tabId: number, port: browser.runtime.Port) => {
   // fetch the tab
   // to be sure of it's existence even if we have the ID
    browser.tabs.get(tabId).then(tab => {
-    // tab exist
+    // tab exist for sure
     // we send the popupOpenedMEssage to the content
-    const currentTab = findOrInitializeTab(tab as Itab);
-    popupOpenedMsg(currentTab);
-    // popupOpenedPort(currentTab);
+    const currentTab = findOrInitializeTab(tab as Itab, port);
   })
 }
 
-browser.runtime.onInstalled.addListener(setupBackground);
+const connected = (port : browser.runtime.Port) => {
+  // we get the tab ID
+  const currentTabId = port?.sender?.tab?.id as number;
+  // we can now init - or fetch - our custom tab
+  tabInit(currentTabId, port);
+}
 
+// Listeners
+
+// receive the message from the popup
 browser.runtime.onMessage.addListener((data, s) => {
-  const { tabId } = data;
-  if (tabId) {
+  const { active, tabId } = data;
+  if (tabId && active) {
     // tabID is present -> It's means we have our information
-    tabInit(tabId);
+    popupOpenedPort(tabId);
   }
+  // return a promise as standard listener response
   return Promise.resolve({response: 'ok'});
 });
+
+// Port connection listen
+browser.runtime.onConnect.addListener(connected);
+

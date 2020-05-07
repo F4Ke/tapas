@@ -1,4 +1,4 @@
-import { Itab } from '../interfaces/tab'
+// import { Itab } from '../interfaces/tab'
 
 const port = browser.runtime.connect(browser.runtime.id, { name: 'content_script/lifecycle' });
 
@@ -22,12 +22,9 @@ const modifyPage = (data : any) => {
 // setup the listener
 // waiting in our case from the message using a counter variable
 // (see function ` popupOpened ` in backgroung.ts )
-browser.runtime.onMessage.addListener((request) => {
+
+port.onMessage.addListener((request:any) => {
   modifyPage(request)
+  // return a promise as standard listener response
   return Promise.resolve({response: 'ok'});
 });
-
-// port.onMessage.addListener((request) => {
-//   modifyPage(request)
-//   return Promise.resolve({response: 'ok'});
-// });
