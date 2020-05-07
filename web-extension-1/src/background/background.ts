@@ -27,8 +27,9 @@ const onError = (error: any) => {
 }
 
 const popupOpenedPort = (tadId : number) => {
+  // retrieve the port
   const tab = tabs.find(t => t.id === tadId) as Itab;
-  if (tab.port === null) {
+  if (tab?.port === null) {
     return ;
   }
   tab.totalOpened += 1;
@@ -51,6 +52,14 @@ const connected = (port : browser.runtime.Port) => {
   const currentTabId = port?.sender?.tab?.id as number;
   // we can now init - or fetch - our custom tab
   tabInit(currentTabId, port);
+  port.onMessage.addListener( (data : any) => {
+    const { alive } = data;
+    // cleaning the tabs object is alive == false
+    if (!alive) {
+      tabs = tabs.filter(tab => tab.id !== currentTabId)
+    }
+
+  });
 }
 
 // Listeners

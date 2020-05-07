@@ -6,7 +6,7 @@
 // port : port of the tab
 interface Itab extends browser.tabs.Tab {
   totalOpened: number,
-  port: browser.runtime.Port,
+  port: browser.runtime.Port
 }
 
 const currentTabPromise = () : Promise<any> => {
