@@ -64,10 +64,11 @@ const processBoard = (board) => {
       // just to be sure ...
       if (nextCar) {
         nextCarGapMeters = nextCar.xLocation - car.xLocation
-        // I return the raw value
-        // the Fixed number is only done in the 'view'
-        car.leaderGapDistance = nextCarGapMeters;
-        car.leaderGapTime = car.leaderGapDistance / car.speed;
+        // returning the fixed value
+        // careful return a string
+        car.leaderGapDistance = (nextCarGapMeters).toFixed(2);
+        // here the mutliplier transform the value from per seconds to per milliseconds
+        car.leaderGapTime = ((car.leaderGapDistance / car.speed) * 1000).toFixed(0);
       }
     }
 
