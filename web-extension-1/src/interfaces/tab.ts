@@ -9,8 +9,24 @@ interface Itab extends browser.tabs.Tab {
   port: browser.runtime.Port
 }
 
+// Inferface for the Counter Event
+interface ICounterIncrementEvent {
+  counter: number,
+}
+
+// Inferface for the Popup opennig Event
+interface IPopupEvent {
+  active: boolean,
+  tabId: number,
+}
+
+// Inferface for the Port disconnect Event
+interface IPortDisconnected {
+  alive: boolean,
+}
+
 const currentTabPromise = () : Promise<any> => {
   return browser.tabs.query({ active:true, currentWindow:true });
 }
 
-export { Itab, currentTabPromise };
+export { Itab, currentTabPromise, ICounterIncrementEvent, IPopupEvent, IPortDisconnected };

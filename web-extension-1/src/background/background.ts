@@ -1,4 +1,4 @@
-import { Itab, currentTabPromise } from '../interfaces/tab'
+import { Itab, currentTabPromise, IPopupEvent, IPortDisconnected } from '../interfaces/tab'
 
 let tabs:Itab[] = new Array<Itab>();
 
@@ -37,6 +37,7 @@ const popupOpenedPort = (tadId : number) => {
   tab.port.postMessage({counter: tab.totalOpened});
 }
 
+// Custom tab object init
 const tabInit = (tabId: number, port: browser.runtime.Port) => {
   // fetch the tab
   // to be sure of it's existence even if we have the ID
@@ -47,13 +48,14 @@ const tabInit = (tabId: number, port: browser.runtime.Port) => {
   })
 }
 
+// port connected
+// init our tab data and listen to it's deconnection
 const connected = (port : browser.runtime.Port) => {
   // we get the tab ID
   const currentTabId = port?.sender?.tab?.id as number;
   // we can now init - or fetch - our custom tab
   tabInit(currentTabId, port);
-  port.onMessage.addListener( (data : any) => {
-    const { alive } = data;
+  port.onMessage.addListener( ({ alive } : IPortDisconnected) => {
     // cleaning the tabs object is alive == false
     if (!alive) {
       tabs = tabs.filter(tab => tab.id !== currentTabId)
@@ -62,18 +64,19 @@ const connected = (port : browser.runtime.Port) => {
   });
 }
 
-// Listeners
-
-// receive the message from the popup
-browser.runtime.onMessage.addListener((data, s) => {
-  const { active, tabId } = data;
+const popupHasOpen = ({ active, tabId } : IPopupEvent) => {
   if (tabId && active) {
     // tabID is present -> It's means we have our information
     popupOpenedPort(tabId);
   }
   // return a promise as standard listener response
   return Promise.resolve({response: 'ok'});
-});
+}
+
+// Listeners
+
+// receive the message from the popup
+browser.runtime.onMessage.addListener(popupHasOpen);
 
 // Port connection listen
 browser.runtime.onConnect.addListener(connected);

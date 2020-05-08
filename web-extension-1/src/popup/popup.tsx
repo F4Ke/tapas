@@ -1,5 +1,5 @@
 // Popup script
-import { currentTabPromise } from '../interfaces/tab'
+import { currentTabPromise, IPopupEvent } from '../interfaces/tab'
 
 (() => {
 
@@ -10,7 +10,7 @@ import { currentTabPromise } from '../interfaces/tab'
     console.log(tabs)
     if (tabs[0] !== undefined) {
       const tabId = tabs[0].id as number;
-      browser.runtime.sendMessage({ active : true, tabId: tabs[0].id });
+      browser.runtime.sendMessage({ active : true, tabId: tabs[0].id } as IPopupEvent);
     }
   });
 
