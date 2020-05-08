@@ -10,7 +10,7 @@ import { currentTabPromise, IPopupEvent } from '../interfaces/tab'
     console.log(tabs)
     if (tabs[0] !== undefined) {
       const tabId = tabs[0].id as number;
-      browser.runtime.sendMessage({ active : true, tabId: tabs[0].id } as IPopupEvent);
+      browser.runtime.sendMessage({ active : true, tabId: tabId } as IPopupEvent);
     }
   });
 
