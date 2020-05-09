@@ -16,8 +16,8 @@ leaderBoard$.subscribe(leaderBoard => {
   leaderBoard.forEach(function(car) {
     t.cell('#', car.position)
     t.cell('Name', car.carName)
-    t.cell('Gap Distance', `${car.leaderGapDistance}m`)
-    t.cell('Gap Time', `${car.leaderGapTime}ms`)
+    t.cell('Gap Distance', `${car.leaderGapDistance.toFixed(2)}m`)
+    t.cell('Gap Time', `${car.leaderGapTime.toFixed(2)}ms`)
     t.newRow()
   });
   process.stdout.write(t.toString());

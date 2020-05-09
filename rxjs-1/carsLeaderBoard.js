@@ -3,6 +3,8 @@ const { map } = require("rxjs/operators");
 const { getCarSpeed } = require('./carSpeed');
 
 CAR_NUMBER = 2;
+let currentLeaderBoardData = [];
+let finalBoard = [];
 
 // return the table sorted
 // using the key paramters
@@ -22,14 +24,13 @@ const carExistInBoard = (board, carName) => {
 }
 
 // return a car object
-const baseCarObject = (time, carName, xLocation, currentSpeedGen) => {
+const baseCarObject = (time, carName, xLocation) => {
   // use the generator and fetch the last known speed of this car
-  const nextGeneratorIt = currentSpeedGen.next();
   return {
     time: time,
     carName: carName,
     xLocation: xLocation,
-    speed: nextGeneratorIt.value
+    speed: 0
   }
 }
 
@@ -54,7 +55,6 @@ const prepareDataProcessBoard = (board) => {
 }
 
 // finalize the data of the board comptuation
-// in order to send it usable for the view
 const processBoard = (board) => {
   const retBoard = prepareDataProcessBoard(board);
   // we process with the calculation of the inverted list
@@ -63,12 +63,7 @@ const processBoard = (board) => {
       const nextCar = retBoard[index+1];
       // just to be sure ...
       if (nextCar) {
-        nextCarGapMeters = nextCar.xLocation - car.xLocation
-        // returning the fixed value
-        // careful return a string
-        car.leaderGapDistance = (nextCarGapMeters).toFixed(2);
-        // here the mutliplier transform the value from per seconds to per milliseconds
-        car.leaderGapTime = ((car.leaderGapDistance / car.speed) * 1000).toFixed(0);
+        car.leaderGapDistance = nextCar.xLocation - car.xLocation;
       }
     }
 
@@ -76,69 +71,74 @@ const processBoard = (board) => {
   return (retBoard)
 }
 
-// this is our generator
-// every time we ask it the speed for our car
-// it will answer us ths last know speed (using it's interval of 200ms)
-function *speedFor(obs) {
-  let values = []
-  obs.subscribe( (speed) => {
-    // we store the values for the speeds
-    // we will be able to return the last value
-    values.push(speed);
-  });
+// calcul just the gap leader time
+// last computation before send the data to the view
+const processSpeed = (board) => {
+  // we process with the calculation of the inverted list
+  board.forEach((car, index) => {
+    if (index < CAR_NUMBER) {
+      const nextCar = board[index+1];
+      // just to be sure ...
+      if (nextCar) {
+        // here the mutliplier transform the value from per seconds to per milliseconds
+        car.leaderGapTime = ((car.leaderGapDistance / car.speed) * 1000);
+      }
+    }
 
-  // note : this while true can be strange for non-generator users
-  while (true) {
-    // here we return the last known avalue
-    yield values[values.length-1]
+  });
+  return (board)
+}
+
+const mergeData = ([leaderboard, ...speeds]) => {
+  finalBoard.forEach((board, i) => {
+    // get the speed in the order from the stream
+    // at this moment our finalboard is in the same position of our stream
+    board.speed = speeds[i];
+  })
+  // sort our board by postion to be usable in the view
+  finalBoard = sortTableObject(processSpeed(finalBoard), 'position');
+  return finalBoard;
+}
+
+
+const leaderboardData = ({time, carName, xLocation}) => {
+  // avoid duplicate data in test exemple
+  if (!carExistInBoard(currentLeaderBoardData, carName)) {
+    // push in the current data board the information of the car present
+    currentLeaderBoardData.push(baseCarObject(time, carName, xLocation));
+  }
+
+  // Limit to the number of cars in the exemple
+  if (currentLeaderBoardData.length >= CAR_NUMBER) {
+    // process the current board raw data
+    finalBoard = processBoard(currentLeaderBoardData);
+    currentLeaderBoardData = []
   }
 }
 
-// create the speed generator, using the carSpeed observable for every car of the race
-const initalizeCarSpeeds = (race) => {
-  const carNames = race.getCars();
-  speedsObs = []
-  carNames.forEach(name => {
-    // create a generator in order to use the "slow"-er observable of the speed calculation
-    const speedGen = speedFor(getCarSpeed(race, name));
-    speedGen.next(); // we start the observable inside our generator
-    speedsObs.push({ name: name, speed: speedGen })
-  })
-  return speedsObs;
-}
-
-const leaderBoardObservable = (race, speedsObs) => {
+const leaderBoardObservable = (race) => {
   const observable = new Observable(subscriber => {
 
-    let currentLeaderBoardData = [];
-
     race.on('data', ({time, carName, xLocation}) => {
-      // avoid duplicate data in test exemple
-      if (!carExistInBoard(currentLeaderBoardData, carName)) {
-        // fetch the generator for the speed promise value
-        const currentSpeedGen = speedsObs.find(e => e.name === carName).speed
-        currentLeaderBoardData.push(baseCarObject(time, carName, xLocation, currentSpeedGen));
-      }
-      // Limit to the number of cars in the exemple
-      if (currentLeaderBoardData.length >= CAR_NUMBER) {
-        const processedBoard = processBoard(currentLeaderBoardData);
-
-        // the preocess bord is reorderd for the show
-        subscriber.next(sortTableObject(processedBoard, 'position'));
-        currentLeaderBoardData = [];
-      }
+      subscriber.next({time, carName, xLocation});
     });
     race.on('end', () => {
       subscriber.complete();
     });
   });
-  return observable;
+  return observable
+    .pipe(map(leaderboardData))
 }
 
 const getLeaderBoard = (race) => {
-  const speedsObs = initalizeCarSpeeds(race);
-  const leaderBoardObs = leaderBoardObservable(race, speedsObs);
-  return leaderBoardObs;
+  const speedsObs = [];
+  // we initialise each car observables
+  race.getCars().forEach(carName => {
+    speedsObs.push(getCarSpeed(race, carName))
+  })
+  const leaderBoardObs = leaderBoardObservable(race);
+  // combineLatest is used to get the last value emited by one of theses observables
+  return combineLatest(leaderBoardObs, ...speedsObs).pipe(map(mergeData));
 }
 
 module.exports = { getLeaderBoard };
