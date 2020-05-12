@@ -1,5 +1,5 @@
 const { combineLatest } = require('rxjs');
-const { map, take, bufferCount } = require("rxjs/operators");
+const { map, bufferCount } = require("rxjs/operators");
 const { getCarSpeed } = require('./carSpeed');
 const { eventToObservable } = require('./eventToObservable')
 
