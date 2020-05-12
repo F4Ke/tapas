@@ -117,10 +117,11 @@ const leaderBoardObservable = (race, raceCarNb) => {
 }
 
 const getLeaderBoard = (race) => {
-  const raceCarNb = race.getCars().length;
+  const cars = race.getCars();
+  const raceCarNb = cars.length;
   const speedsObs = [];
   // we initialise each car observables
-  race.getCars().forEach(carName => {
+  cars.forEach(carName => {
     speedsObs.push(getCarSpeed(race, carName))
   })
   const leaderBoardObs = leaderBoardObservable(race, raceCarNb);
