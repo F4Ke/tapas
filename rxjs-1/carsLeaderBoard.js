@@ -1,12 +1,7 @@
 const { combineLatest, from, fromEvent } = require('rxjs');
-const { map } = require("rxjs/operators");
+const { map, take, bufferCount } = require("rxjs/operators");
 const { getCarSpeed } = require('./carSpeed');
-
 const { eventToObservable } = require('./eventToObservable')
-
-CAR_NUMBER = 2;
-let currentLeaderBoardData = [];
-let finalBoard = [];
 
 // return the table sorted
 // using the key paramters
@@ -26,19 +21,21 @@ const carExistInBoard = (board, carName) => {
 }
 
 // return a car object
-const baseCarObject = (time, carName, xLocation) => {
-  // use the generator and fetch the last known speed of this car
-  return {
-    time: time,
-    carName: carName,
-    xLocation: xLocation,
-    speed: 0
-  }
+const baseCarObjects = (cars) => {
+  // return the array of premade leaderboard data
+  return cars.map((car) => {
+    return {
+      time: car.time,
+      carName: car.carName,
+      xLocation: car.xLocation,
+      speed: 0
+    }
+  });
 }
 
 // we prepare the board raw data in order to complete the computation
 const prepareDataProcessBoard = (board) => {
-  let pos = CAR_NUMBER;
+  let pos = board.length;
   // we order by inverted position
   // in order to simplify the calcul of the gap
   return sortTableObject(board, 'xLocation').map((car) => {
@@ -61,7 +58,7 @@ const processBoard = (board) => {
   const retBoard = prepareDataProcessBoard(board);
   // we process with the calculation of the inverted list
   retBoard.forEach((car, index) => {
-    if (index < CAR_NUMBER) {
+    if (index < retBoard.length) {
       const nextCar = retBoard[index+1];
       // just to be sure ...
       if (nextCar) {
@@ -78,7 +75,7 @@ const processBoard = (board) => {
 const processSpeed = (board) => {
   // we process with the calculation of the inverted list
   board.forEach((car, index) => {
-    if (index < CAR_NUMBER) {
+    if (index < board.length) {
       const nextCar = board[index+1];
       // just to be sure ...
       if (nextCar) {
@@ -91,47 +88,47 @@ const processSpeed = (board) => {
   return (board)
 }
 
+// sort our board by postion to be usable in the view
+const reOrderTable = (board) => {
+  return sortTableObject(board, 'position');
+}
+
+// merge our speeds observable in our current leaderboard
 const mergeData = ([leaderboard, ...speeds]) => {
-  finalBoard.forEach((board, i) => {
+  leaderboard.forEach((board, i) => {
     // get the speed in the order from the stream
     // at this moment our finalboard is in the same position of our stream
     board.speed = speeds[i];
   })
-  // sort our board by postion to be usable in the view
-  finalBoard = sortTableObject(processSpeed(finalBoard), 'position');
-  return finalBoard;
+  return leaderboard;
 }
 
-
-const leaderboardData = ({time, carName, xLocation}) => {
-  // avoid duplicate data in test exemple
-  if (!carExistInBoard(currentLeaderBoardData, carName)) {
-    // push in the current data board the information of the car present
-    currentLeaderBoardData.push(baseCarObject(time, carName, xLocation));
-  }
-
-  // Limit to the number of cars in the exemple
-  if (currentLeaderBoardData.length >= CAR_NUMBER) {
-    // process the current board raw data
-    finalBoard = processBoard(currentLeaderBoardData);
-    currentLeaderBoardData = []
-  }
-}
-
-const leaderBoardObservable = (race) => {
+// fetch our leaderboard onbservable
+// prepare the leaderboard data
+// process the table to wait for the speed data
+// note : The buffercount is to 'wait' to have our X cars data before processing the leaderboard
+const leaderBoardObservable = (race, raceCarNb) => {
+  const currentLeaderBoardData = [];
   return eventToObservable(race)
-    .pipe(map(leaderboardData))
+    .pipe(
+      bufferCount(raceCarNb),
+      map(baseCarObjects),
+      map(processBoard));
 }
 
 const getLeaderBoard = (race) => {
+  const raceCarNb = race.getCars().length;
   const speedsObs = [];
   // we initialise each car observables
   race.getCars().forEach(carName => {
     speedsObs.push(getCarSpeed(race, carName))
   })
-  const leaderBoardObs = leaderBoardObservable(race);
+  const leaderBoardObs = leaderBoardObservable(race, raceCarNb);
   // combineLatest is used to get the last value emited by one of theses observables
-  return combineLatest(leaderBoardObs, ...speedsObs).pipe(map(mergeData));
+  return combineLatest(leaderBoardObs, ...speedsObs).pipe(
+    map(mergeData),
+    map(processSpeed),
+    map(reOrderTable));
 }
 
 module.exports = { getLeaderBoard };
