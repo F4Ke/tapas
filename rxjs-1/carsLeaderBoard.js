@@ -1,6 +1,8 @@
-const { Observable, combineLatest } = require('rxjs');
+const { combineLatest, from, fromEvent } = require('rxjs');
 const { map } = require("rxjs/operators");
 const { getCarSpeed } = require('./carSpeed');
+
+const { eventToObservable } = require('./eventToObservable')
 
 CAR_NUMBER = 2;
 let currentLeaderBoardData = [];
@@ -117,16 +119,7 @@ const leaderboardData = ({time, carName, xLocation}) => {
 }
 
 const leaderBoardObservable = (race) => {
-  const observable = new Observable(subscriber => {
-
-    race.on('data', ({time, carName, xLocation}) => {
-      subscriber.next({time, carName, xLocation});
-    });
-    race.on('end', () => {
-      subscriber.complete();
-    });
-  });
-  return observable
+  return eventToObservable(race)
     .pipe(map(leaderboardData))
 }
 

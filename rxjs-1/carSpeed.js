@@ -1,5 +1,6 @@
 const { Observable } = require('rxjs');
 const { bufferTime, filter, map } = require("rxjs/operators");
+const { eventToObservable } = require('./eventToObservable')
 
 REFRESH_RATE = 200; // ms : minimum 150
 
@@ -26,24 +27,16 @@ const calculateSpeed = (dataObjs) => {
 }
 
 const getCarSpeed = (race, wantedCarName) => {
-  // we create a simple observable to use the data of the event
-  const observable = new Observable(subscriber => {
-    race.on('data', (data) => {
-      subscriber.next(data);
-    });
-    race.on('end', () => {
-      subscriber.complete();
-    });
-  });
-
   // buffertime:
   // store the emitted values
   // when the time has passed ->
   // all values stored during this time
-  return observable
-    .pipe(filter(car => car.carName === wantedCarName))
-    .pipe(bufferTime(REFRESH_RATE))
-    .pipe(map(calculateSpeed));
+  return eventToObservable(race)
+    .pipe(
+      filter(car => car.carName === wantedCarName),
+      bufferTime(REFRESH_RATE),
+      map(calculateSpeed)
+    );
 }
 
 module.exports = { getCarSpeed, calculateSpeed };
